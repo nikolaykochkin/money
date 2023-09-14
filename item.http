@@ -1,0 +1,7 @@
+POST http://localhost:8080/item
+Content-Type: application/json
+
+{
+  "name": "name",
+  "externalId": "exId"
+}
