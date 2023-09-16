@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.util.Currency;
 
 @Entity
+@Table(uniqueConstraints = @UniqueConstraint(columnNames = {"period", "account_id"}))
 public class AccountBalance extends PanacheEntity {
     @Column(nullable = false)
     public Instant period;

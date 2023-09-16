@@ -3,16 +3,16 @@ package name.nikolaikochkin.invoice.parser;
 import io.quarkus.logging.Log;
 import io.quarkus.vertx.ConsumeEvent;
 import io.smallrye.common.annotation.Blocking;
+import io.smallrye.common.annotation.NonBlocking;
+import io.smallrye.mutiny.Uni;
 import io.vertx.mutiny.core.eventbus.EventBus;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import name.nikolaikochkin.invoice.InvoiceService;
-import name.nikolaikochkin.invoice.entity.Invoice;
-import name.nikolaikochkin.invoice.entity.InvoiceState;
-import name.nikolaikochkin.invoice.entity.Seller;
+import name.nikolaikochkin.invoice.entity.InvoiceEntityListener;
+import name.nikolaikochkin.invoice.entity.*;
 import name.nikolaikochkin.invoice.parser.montenegro.MontenegroParser;
+import org.hibernate.reactive.mutiny.Mutiny;
 
-import java.time.Duration;
 import java.util.Objects;
 
 import static io.quarkus.vertx.VertxContextSupport.subscribeAndAwait;
@@ -30,30 +30,44 @@ public class ParserService {
     @Inject
     MontenegroParser montenegroParser;
 
-    @Blocking
+    @Inject
+    Mutiny.SessionFactory sessionFactory;
+
+    @NonBlocking
     @ConsumeEvent
-    public void parseInvoice(Invoice invoice) {
+    public Uni<Void> parseInvoice(Invoice invoice) {
         Log.debugf("Start parsing %s", invoice);
 
         assertNotNull(invoice);
         assertNotNull(invoice.url);
 
+        Uni<Invoice> invoiceUni;
+
         if (invoice.url.startsWith(montenegroBaseUrl)) {
-            try {
-                montenegroParser.parseInvoice(invoice);
-            } catch (Throwable e) {
-                handleError(invoice, e);
-            }
+            invoiceUni = montenegroParser.parseInvoice(invoice);
         } else {
-            handleError(invoice, new RuntimeException("Unknown URL domain"));
+            invoiceUni = Uni.createFrom().failure(() -> new RuntimeException("Unknown URL domain"));
         }
 
-        eventBus.requestAndForget(InvoiceService.class.getName(), invoice);
+        return invoiceUni
+                .onItem().call(this::paymentMethodToAccountType)
+                .onFailure().recoverWithItem(throwable -> handleError(invoice, throwable))
+                .chain(i -> sessionFactory.withTransaction(session -> session.merge(i)))
+                .replaceWithVoid();
     }
 
-    private void handleError(Invoice invoice, Throwable e) {
+    private Uni<Invoice> paymentMethodToAccountType(Invoice invoice) {
+        return AccountPaymentType.findAccountTypeByPaymentMethod(invoice.paymentMethod)
+                .onItem().transform(accountType -> {
+                    invoice.accountType = accountType;
+                    return invoice;
+                });
+    }
+
+    private Invoice handleError(Invoice invoice, Throwable e) {
         Log.errorf("Could not parse %s. Cause: %s", invoice, e.getMessage(), e);
         invoice.state = InvoiceState.ERROR;
         invoice.error = e.getMessage();
+        return invoice;
     }
 }

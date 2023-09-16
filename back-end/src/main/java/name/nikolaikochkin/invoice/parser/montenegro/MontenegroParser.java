@@ -1,7 +1,9 @@
 package name.nikolaikochkin.invoice.parser.montenegro;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.smallrye.common.annotation.Blocking;
+import io.smallrye.common.annotation.NonBlocking;
+import io.smallrye.mutiny.Uni;
+import io.smallrye.mutiny.unchecked.Unchecked;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import name.nikolaikochkin.invoice.entity.Invoice;
@@ -15,13 +17,10 @@ import name.nikolaikochkin.invoice.parser.montenegro.model.SellerMe;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 import org.jetbrains.annotations.NotNull;
 
-import java.time.Duration;
 import java.util.Collections;
 import java.util.Currency;
 import java.util.List;
 import java.util.Optional;
-
-import static io.quarkus.vertx.VertxContextSupport.subscribeAndAwait;
 
 @ApplicationScoped
 public class MontenegroParser {
@@ -35,31 +34,41 @@ public class MontenegroParser {
     @Inject
     ObjectMapper objectMapper;
 
-    @Blocking
-    public void parseInvoice(Invoice invoice) throws Throwable {
+    @NonBlocking
+    public Uni<Invoice> parseInvoice(Invoice invoice) {
         var requestData = RequestData.fromUrl(invoice.url)
                 .orElseThrow(() -> new RuntimeException("Montenegro URL is not valid"));
 
-        invoice.content = montenegroTaxGovRestClient.verifyInvoice(requestData)
+        return montenegroTaxGovRestClient.verifyInvoice(requestData)
                 .onFailure().retry().atMost(3)
-                .await().asOptional().atMost(Duration.ofMinutes(15))
-                .orElseThrow(() -> new RuntimeException("Montenegro tax rest client returned null response"));
-
-        var invoiceMe = objectMapper.readValue(invoice.content, InvoiceMe.class);
-
-        fillInvoiceFromInvoiceMe(invoice, invoiceMe);
+                .onItem().transform(body -> {
+                    invoice.content = body;
+                    return invoice;
+                })
+                .chain(Unchecked.function(this::readFromContent));
     }
 
-    private void fillInvoiceFromInvoiceMe(Invoice invoice, InvoiceMe invoiceMe) throws Throwable {
+    @NonBlocking
+    private Uni<Invoice> readFromContent(Invoice invoice) throws Exception {
+        var invoiceMe = objectMapper.readValue(invoice.content, InvoiceMe.class);
+        fillInvoiceFromInvoiceMe(invoice, invoiceMe);
+        return Seller.findByExternalId(invoiceMe.seller.idNum)
+                .replaceIfNullWith(sellerMeToSeller(invoiceMe.seller))
+                .onItem().transform(seller -> {
+                    invoice.seller = seller;
+                    return invoice;
+                });
+    }
+
+    private void fillInvoiceFromInvoiceMe(Invoice invoice, InvoiceMe invoiceMe) {
         invoice.timestamp = invoiceMe.dateTimeCreated;
         invoice.externalId = invoiceMe.iic;
         invoice.items = getInvoiceItems(invoiceMe);
         invoice.items.forEach(invoiceItem -> invoiceItem.invoice = invoice);
-        invoice.seller = findOrCreateSeller(invoiceMe.seller);
         invoice.paymentMethod = getPaymentMethod(invoiceMe);
         invoice.currency = EUR;
         invoice.totalPrice = invoiceMe.totalPrice;
-        invoice.state = InvoiceState.PARSED;
+        invoice.state = InvoiceState.DONE;
     }
 
     @NotNull
@@ -74,11 +83,6 @@ public class MontenegroParser {
                 .map(l -> l.get(0))
                 .map(p -> p.typeCode)
                 .orElse(null);
-    }
-
-    private Seller findOrCreateSeller(SellerMe sellerMe) throws Throwable {
-        return Optional.ofNullable(subscribeAndAwait(() -> Seller.findByExternalId(sellerMe.idNum)))
-                .orElseGet(() -> sellerMeToSeller(sellerMe));
     }
 
     private Seller sellerMeToSeller(SellerMe sellerMe) {

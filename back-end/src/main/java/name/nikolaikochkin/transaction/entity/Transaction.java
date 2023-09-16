@@ -29,7 +29,6 @@ public class Transaction extends PanacheEntity {
     public Account account;
 
     @ManyToOne
-    @JoinColumn(nullable = false)
     public Category category;
 
     @JsonBackReference("transactions")

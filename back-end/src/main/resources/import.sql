@@ -1,15 +1,32 @@
 INSERT INTO users (id, name, login, password, telegram_id)
-VALUES (1, 'Nikolai', 'nikolai', '_', 74543363);
+VALUES (1, 'Nikolai', 'nikolai', '_', 0),
+       (2, 'Ekaterina', 'ekaterina', '_', 1);
 
-ALTER SEQUENCE users_seq RESTART WITH 2;
+ALTER SEQUENCE users_seq RESTART WITH 3;
 
 INSERT INTO account (id, name, type, currency, owner_id)
 VALUES (1, 'Nikolai Euro Cahs', 0, 'EUR', 1),
        (2, 'Nikolai Euro Card', 1, 'EUR', 1),
-       (3, 'Nikolai Euro Bank Account', 2, 'EUR', 1);
+       (3, 'Nikolai Euro Bank Account', 2, 'EUR', 1),
+       (4, 'Ekaterina Euro Cahs', 0, 'EUR', 2),
+       (5, 'Ekaterina Euro Card', 1, 'EUR', 2),
+       (6, 'Ekaterina Euro Bank Account', 2, 'EUR', 2);
 
+ALTER SEQUENCE account_seq RESTART WITH 7;
 
-ALTER SEQUENCE account_seq RESTART WITH 4;
+INSERT INTO account_payment_type(id, account_type, payment_method)
+VALUES (1, 0, 'BANKNOTE'),
+       (2, 1, 'CARD');
+
+ALTER SEQUENCE account_payment_type_seq RESTART WITH 3;
+
+INSERT INTO user_default_account (id, user_id, type, account_id)
+VALUES (1, 1, 0, 1),
+       (2, 1, 1, 2),
+       (3, 2, 0, 4),
+       (4, 2, 1, 5);
+
+ALTER SEQUENCE user_default_account_seq RESTART WITH 5;
 
 INSERT INTO category (id, category_group, category_name, transaction_type)
 VALUES (1, 'Income', 'Salary', 0),

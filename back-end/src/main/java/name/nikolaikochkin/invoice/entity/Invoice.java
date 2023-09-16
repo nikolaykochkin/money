@@ -21,6 +21,7 @@ import java.util.Currency;
 import java.util.List;
 
 @Entity
+@EntityListeners(InvoiceEntityListener.class)
 public class Invoice extends PanacheEntity {
 
     public Instant timestamp = Instant.now();
@@ -38,6 +39,8 @@ public class Invoice extends PanacheEntity {
     public String content;
 
     public String paymentMethod;
+
+    public AccountType accountType;
 
     public Currency currency;
 
