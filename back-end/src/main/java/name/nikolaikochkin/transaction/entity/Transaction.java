@@ -2,10 +2,7 @@ package name.nikolaikochkin.transaction.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import io.quarkus.hibernate.reactive.panache.PanacheEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.Positive;
 import name.nikolaikochkin.invoice.entity.Invoice;
 import name.nikolaikochkin.user.User;
@@ -17,9 +14,13 @@ import java.time.Instant;
 import java.util.Currency;
 
 @Entity
+@EntityListeners(TransactionEntityListener.class)
+@Table(indexes = {
+        @Index(columnList = "timestamp, account_id")
+})
 public class Transaction extends PanacheEntity {
     @Column(nullable = false)
-    public Instant timestamp;
+    public Instant timestamp = Instant.now();
 
     @Column(nullable = false)
     public TransactionType type;
