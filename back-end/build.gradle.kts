@@ -11,6 +11,7 @@ repositories {
 val quarkusPlatformGroupId: String by project
 val quarkusPlatformArtifactId: String by project
 val quarkusPlatformVersion: String by project
+val telegrambotsVersion: String by project
 
 dependencies {
     implementation(enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}"))
@@ -26,8 +27,10 @@ dependencies {
     implementation("io.quarkus:quarkus-hibernate-validator")
     implementation("io.quarkus:quarkus-reactive-pg-client")
 
-    implementation("org.telegram:telegrambots:6.7.0")
-    implementation("org.telegram:telegrambots-abilities:6.7.0")
+    implementation("io.quarkus:quarkus-micrometer-registry-prometheus")
+
+    implementation("org.telegram:telegrambots:${telegrambotsVersion}")
+    implementation("org.telegram:telegrambots-abilities:${telegrambotsVersion}")
 
 // TODO: 29.7.23. Migrations
 //    implementation("io.quarkus:quarkus-flyway")

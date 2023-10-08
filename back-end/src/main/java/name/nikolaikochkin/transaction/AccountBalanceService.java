@@ -47,7 +47,17 @@ public class AccountBalanceService {
     private Uni<Void> updateAccountTurnover(Transaction transaction, Mutiny.Session session) {
         return getOrCreateAccountTurnover(transaction, session)
                 .chain(accountTurnover -> setAccountTurnoverSum(accountTurnover, session))
-                .chain(session::persist);
+                .chain(session::persist)
+                .onFailure().invoke(Log::error);
+    }
+
+    private Uni<Void> updateAccountBalance(Transaction transaction, Mutiny.Session session) {
+        return getAccountBalanceData(transaction, session)
+                .chain(this::getCurrentAccountBalances)
+                .chain(this::getMonthlyAccountTurnover)
+                .map(this::calculateAccountBalances)
+                .chain(data -> session.persistAll(data.balances.toArray()))
+                .onFailure().invoke(Log::error);
     }
 
     private Uni<AccountTurnover> getOrCreateAccountTurnover(Transaction transaction, Mutiny.Session session) {
@@ -87,14 +97,6 @@ public class AccountBalanceService {
                 });
     }
 
-    private Uni<Void> updateAccountBalance(Transaction transaction, Mutiny.Session session) {
-        return getAccountBalanceData(transaction, session)
-                .chain(this::getCurrentAccountBalances)
-                .chain(this::getMonthlyAccountTurnover)
-                .map(this::calculateAccountBalances)
-                .chain(data -> session.persistAll(data.balances.toArray()))
-                .onFailure().invoke(Log::error);
-    }
 
     private Uni<AccountBalanceData> getAccountBalanceData(Transaction transaction, Mutiny.Session session) {
         var data = new AccountBalanceData();
