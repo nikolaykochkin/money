@@ -37,7 +37,3 @@ nb-configuration.xml
 
 # Plugin directory
 /.quarkus/cli/plugins/
-
-/@money_bot
-/back-end/@money_bot
-/@money_bot.wal.0
