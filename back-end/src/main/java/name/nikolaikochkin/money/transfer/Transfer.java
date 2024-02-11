@@ -30,9 +30,9 @@ public class Transfer extends DocumentEntity {
     @NotNull
     @Positive
     @Column(nullable = false)
-    public BigDecimal sum;
+    public BigDecimal amount;
 
     @JsonManagedReference("transfer")
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "transfer")
     public List<AccountOperation> accountOperations;
 }

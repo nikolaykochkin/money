@@ -6,6 +6,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToMany;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import name.nikolaikochkin.money.model.DocumentEntity;
 
 import java.util.Currency;
@@ -17,9 +18,11 @@ public class Budget extends DocumentEntity {
     @Column(nullable = false)
     public String name;
 
-    @JsonManagedReference
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    public List<BudgetItem> budgetItems;
-
+    @NotNull
+    @Column(nullable = false)
     public Currency currency;
+
+    @JsonManagedReference
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "budget")
+    public List<BudgetItem> budgetItems;
 }

@@ -20,6 +20,7 @@ import java.util.List;
 @EntityListeners(TransactionService.class)
 public class Transaction extends DocumentEntity {
     @NotNull
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     public TransactionType type;
 
@@ -41,10 +42,10 @@ public class Transaction extends DocumentEntity {
     @NotNull
     @Positive
     @Column(nullable = false)
-    public BigDecimal sum;
+    public BigDecimal amount;
 
     @JsonManagedReference("transaction")
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "transaction")
     public List<AccountOperation> accountOperations;
 
     public static Transaction findByInvoice(Invoice invoice) {
@@ -59,7 +60,7 @@ public class Transaction extends DocumentEntity {
         transaction.type = TransactionType.EXPENSE;
         transaction.category = invoice.seller.category;
         transaction.currency = invoice.currency;
-        transaction.sum = invoice.totalPrice;
+        transaction.amount = invoice.totalPrice;
         transaction.user = invoice.user;
         transaction.persist();
         return transaction;

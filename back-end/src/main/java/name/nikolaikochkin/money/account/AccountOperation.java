@@ -26,6 +26,7 @@ public class AccountOperation extends BaseEntity {
     public Account account;
 
     @NotNull
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     public TransactionType type;
 
@@ -43,7 +44,7 @@ public class AccountOperation extends BaseEntity {
 
     @NotNull
     @Column(nullable = false)
-    public BigDecimal sum;
+    public BigDecimal amount;
 
     public void fillByTransaction(Transaction transaction) {
         this.timestamp = transaction.timestamp;
@@ -51,7 +52,7 @@ public class AccountOperation extends BaseEntity {
         this.type = transaction.type;
         this.transaction = transaction;
         this.currency = transaction.currency;
-        this.sum = type == TransactionType.INCOME ? transaction.sum : transaction.sum.negate();
+        this.amount = type == TransactionType.INCOME ? transaction.amount : transaction.amount.negate();
     }
 
     public void fillByTransfer(Transfer transfer, TransactionType type) {
@@ -60,7 +61,7 @@ public class AccountOperation extends BaseEntity {
         this.type = type;
         this.transfer = transfer;
         this.currency = transfer.currency;
-        this.sum = type == TransactionType.INCOME ? transfer.sum : transfer.sum.negate();
+        this.amount = type == TransactionType.INCOME ? transfer.amount : transfer.amount.negate();
     }
 
     public static Optional<AccountOperation> findByTransaction(Transaction transaction) {

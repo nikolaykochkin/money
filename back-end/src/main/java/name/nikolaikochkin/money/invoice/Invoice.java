@@ -15,16 +15,17 @@ import java.util.List;
 
 @Entity
 @NamedEntityGraph(
-    name = "invoice-items-entity-graph",
-    attributeNodes = {
-        @NamedAttributeNode(value = "items")
-    }
+        name = "invoice-items-entity-graph",
+        attributeNodes = {
+                @NamedAttributeNode(value = "items")
+        }
 )
 @EntityListeners(InvoiceService.class)
 public class Invoice extends DocumentEntity {
     public String externalId;
 
     @NotNull
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     public State state = State.NEW;
 
@@ -47,7 +48,7 @@ public class Invoice extends DocumentEntity {
     public Seller seller;
 
     @JsonManagedReference
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "invoice")
     public List<Item> items;
 
     public String error;
